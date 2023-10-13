@@ -1,0 +1,3 @@
+name: InstantKick
+version: '${project.version}'
+main: it.frafol.instantkick.InstantKick
