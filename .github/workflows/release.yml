@@ -32,7 +32,7 @@ jobs:
         id: commit_hash
         run: |
           COMMIT_HASH=$(git rev-parse --short HEAD)
-          echo "COMMIT_HASH=$COMMIT_HASH" >> $GITHUB_ENV
+          echo "COMMIT_HASH=${COMMIT_HASH}" >> $GITHUB_ENV
 
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v3
@@ -78,7 +78,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.commit_hash.outputs.COMMIT_HASH }}
+          tag_name: v${{ steps.commit_hash.outputs.COMMIT_HASH }}
           release_name: Release ${{ steps.commit_hash.outputs.COMMIT_HASH }}
           draft: false
           prerelease: true
