@@ -28,11 +28,9 @@ jobs:
           JAR_FILE=$(find target -maxdepth 1 -name "*.jar" ! -name "original*.jar" | head -n 1)
           echo "JAR_FILE=$JAR_FILE" >> $GITHUB_ENV
 
-      - name: Get commit hash
-        id: commit_hash
-        run: |
-          COMMIT_HASH=$(git rev-parse --short HEAD)
-          echo "COMMIT_HASH=${COMMIT_HASH}" >> $GITHUB_ENV
+      - name: Find git version
+        id: git-version
+        run: echo "id=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v3
@@ -60,17 +58,11 @@ jobs:
           JAR_FILE=$(find ./target -maxdepth 1 -name "*.jar" ! -name "original*.jar" | head -n 1)
           echo "JAR_FILE=$JAR_FILE" >> $GITHUB_ENV
 
-      - name: List existing releases
-        id: list_releases
-        run: |
-          curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases?per_page=100" > releases.json
-
-      - name: Delete previous pre-releases
-        id: delete_pre_releases
-        run: |
-          cat releases.json | jq '.[] | select(.prerelease == true) | .id' | while read -r id; do
-            curl -X DELETE -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/$id"
-          done
+      - uses: dev-drprasad/delete-tag-and-release@v0.2.1
+        if: ${{ github.event_name == 'push' }}
+        with:
+          delete_release: true
+          tag_name: dev-build
 
       - name: Create GitHub Release
         id: create_release
@@ -78,8 +70,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ steps.commit_hash.outputs.COMMIT_HASH }}
-          release_name: Release ${{ steps.commit_hash.outputs.COMMIT_HASH }}
+          tag_name: dev-build
+          release_name: Release ${{ steps.git-version.outputs.id }}
           draft: false
           prerelease: true
 
@@ -90,5 +82,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ env.JAR_FILE }}
-          asset_name: instantkick-${{ steps.commit_hash.outputs.COMMIT_HASH }}.jar
+          asset_name: instantkick-${{ steps.git-version.outputs.id }}.jar
           asset_content_type: application/java-archive
