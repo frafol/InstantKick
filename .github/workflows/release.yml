@@ -28,11 +28,11 @@ jobs:
           JAR_FILE=$(find target -maxdepth 1 -name "*.jar" ! -name "original*.jar" | head -n 1)
           echo "JAR_FILE=$JAR_FILE" >> $GITHUB_ENV
 
-      - name: Get commit count
-        id: commit_count
+      - name: Get commit hash
+        id: commit_hash
         run: |
-          COMMIT_COUNT=$(git rev-list --count HEAD)
-          echo "COMMIT_COUNT=$COMMIT_COUNT" >> $GITHUB_ENV
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          echo "COMMIT_HASH=$COMMIT_HASH" >> $GITHUB_ENV
 
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v3
@@ -60,13 +60,20 @@ jobs:
           JAR_FILE=$(find ./target -maxdepth 1 -name "*.jar" ! -name "original*.jar" | head -n 1)
           echo "JAR_FILE=$JAR_FILE" >> $GITHUB_ENV
 
-      - name: Delete previous pre-release
-        uses: octokit/request-action@v2.0.1
-        with:
-          route: DELETE /repos/${{ github.repository }}/releases/tags/latest
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
+      - name: List existing pre-releases
+        id: list_pre_releases
+        run: |
+          PRE_RELEASES=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases?per_page=100" | jq -r '.[] | select(.prerelease == true) | .id')
+          echo "PRE_RELEASES=$PRE_RELEASES" >> $GITHUB_ENV
+
+      - name: Delete previous pre-releases
+        id: delete_pre_releases
+        run: |
+          if [ -n "$PRE_RELEASES" ]; then
+            for release_id in $PRE_RELEASES; do
+              curl -X DELETE -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/$release_id"
+            done
+          fi
 
       - name: Create GitHub Release
         id: create_release
@@ -74,8 +81,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ github.run_number }}
-          release_name: Release ${{ github.run_number }} - Commit ${{ steps.commit_count.outputs.COMMIT_COUNT }}
+          tag_name: ${{ steps.commit_hash.outputs.COMMIT_HASH }}
+          release_name: Release ${{ steps.commit_hash.outputs.COMMIT_HASH }}
           draft: false
           prerelease: true
 
@@ -86,5 +93,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ env.JAR_FILE }}
-          asset_name: instantkick-${{ steps.commit_count.outputs.COMMIT_COUNT }}.jar
+          asset_name: instantkick-${{ steps.commit_hash.outputs.COMMIT_HASH }}.jar
           asset_content_type: application/java-archive
