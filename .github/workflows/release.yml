@@ -28,11 +28,11 @@ jobs:
           JAR_FILE=$(find target -maxdepth 1 -name "*.jar" ! -name "original*.jar" | head -n 1)
           echo "JAR_FILE=$JAR_FILE" >> $GITHUB_ENV
 
-      - name: Read version from pom.xml
-        id: read_version
+      - name: Get commit count
+        id: commit_count
         run: |
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          echo "COMMIT_COUNT=$COMMIT_COUNT" >> $GITHUB_ENV
 
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v3
@@ -75,7 +75,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: v${{ github.run_number }}
-          release_name: Release ${{ github.run_number }}
+          release_name: Release ${{ github.run_number }} - Commit ${{ steps.commit_count.outputs.COMMIT_COUNT }}
           draft: false
           prerelease: true
 
@@ -86,5 +86,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ env.JAR_FILE }}
-          asset_name: instantkick-${{ steps.read_version.outputs.VERSION }}.jar
+          asset_name: instantkick-${{ steps.commit_count.outputs.COMMIT_COUNT }}.jar
           asset_content_type: application/java-archive
