@@ -28,6 +28,12 @@ jobs:
           JAR_FILE=$(find target -maxdepth 1 -name "*.jar" ! -name "original*.jar" | head -n 1)
           echo "JAR_FILE=$JAR_FILE" >> $GITHUB_ENV
 
+      - name: Read version from pom.xml
+        id: read_version
+        run: |
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v3
         with:
@@ -80,5 +86,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ env.JAR_FILE }}
-          asset_name: instantkick-${{ github.sha.substring(0, 7) }}.jar
+          asset_name: instantkick-${{ steps.read_version.outputs.VERSION }}.jar
           asset_content_type: application/java-archive
