@@ -58,8 +58,11 @@ jobs:
           JAR_FILE=$(find ./target -maxdepth 1 -name "*.jar" ! -name "original*.jar" | head -n 1)
           echo "JAR_FILE=$JAR_FILE" >> $GITHUB_ENV
 
-      - uses: dev-drprasad/delete-tag-and-release@v0.2.1
+      - name: Remove older releases
+        uses: dev-drprasad/delete-tag-and-release@v0.2.1
         if: ${{ github.event_name == 'push' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           delete_release: true
           tag_name: dev-build
